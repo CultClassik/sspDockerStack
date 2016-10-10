@@ -1,0 +1,57 @@
+version: '2'
+
+services:
+  db:
+    image: mysql
+    ports:
+      - 3306:3306
+    volumes:
+      - ${MYSQL_DATA_DIR}:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+  redis:
+    image: redis:alpine
+    ports:
+      - 6379:6379
+
+  php:
+    build: php7-fpm
+    environment:
+      TERM: xterm
+      PUID: ${WEB_UID} 
+      PGID: ${WEB_GID}
+    ports:
+      - 9000:9000
+    volumes:
+      - ${SYMFONY_APP_PATH}:/var/www/symfony
+      - ${SYMFONY_LOG_PATH}:/var/www/symfony/app/logs
+
+  nginx:
+    build: nginx
+    environment:
+      TERM: xterm
+      PUID: ${WEB_UID}
+      PGID: ${WEB_GID}
+    ports:
+      - 80:80
+    links:
+      - php
+    volumes_from:
+      - php
+    volumes:
+      - ${WEB_LOG_PATH}:/var/log/nginx
+
+  elk:
+    image: willdurand/elk
+    ports:
+      - 81:80
+    volumes:
+      - ${ELK_PATH_LOGSTASH}:/etc/logstash
+      - ${ELK_PATH_PATTERNS}:/opt/logstash/patterns
+    volumes_from:
+      - php
+      - nginx
